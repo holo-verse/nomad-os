@@ -914,7 +914,7 @@ function renderNotebooklm() {
 async function renderPreise() {
   const c = document.getElementById('win-content');
   const lang = document.documentElement.lang || 'de';
-  c.innerHTML = `<div style="padding:8px 4px;"><div style="color:var(--text-dim);font-size:10px;margin-bottom:12px;">$ cat preise.json | jq '.[] | select(.visibility=="public")'</div><div id="preise-loading" style="color:var(--text-dim);font-size:11px;">Lade Preise...</div></div>`;
+  c.innerHTML = `<div style="padding:8px 4px;"><div id="preise-loading" style="color:var(--text-dim);font-size:11px;">Lade Preise...</div></div>`;
   try {
     const [prodRes, priceRes] = await Promise.all([
       fetch(`${SB_URL}/rest/v1/products?select=id,name,description_short,product_type&product_type=in.(consulting,einmalig,workshop)&status=eq.active`, {headers: SB_HEADERS}),
@@ -939,7 +939,7 @@ async function renderPreise() {
     ];
 
     let html = '<div style="padding:8px 4px;">';
-    html += `<div style="color:var(--text-dim);font-size:10px;margin-bottom:12px;">$ cat preise.json | jq '.[] | select(.visibility=="public")'</div>`;
+    
 
     for (const sec of sections) {
       const items = products.filter(p => p.product_type === sec.type);
@@ -966,8 +966,8 @@ async function renderPreise() {
 
     html += `<div style="font-size:9px;color:var(--text-dim);border-top:1px solid var(--card-border);padding-top:8px;margin-top:4px;">`;
     html += lang === 'en'
-      ? '💬 Hourly rate on request: 100 EUR/h · Individual offers & funding advice: <a href="mailto:phil@holo-ver.se" style="color:var(--teal);">Book Discovery Call</a>'
-      : '💬 Stundensatz auf Anfrage: 100 EUR/h · Individuelle Angebote & Fördermittelberatung: <a href="mailto:phil@holo-ver.se" style="color:var(--teal);">Discovery Call buchen</a>';
+      ? '💬 Hourly rate on request: 100 EUR/h · Individual offers & funding advice: <a href="https://calendly.com/zinserphil" target="_blank" rel="noopener" style="color:var(--teal);">Book Discovery Call ↗</a>'
+      : '💬 Stundensatz auf Anfrage: 100 EUR/h · Individuelle Angebote & Fördermittelberatung: <a href="https://calendly.com/zinserphil" target="_blank" rel="noopener" style="color:var(--teal);">Discovery Call buchen ↗</a>';
     html += `</div>`;
     html += '</div>';
     c.innerHTML = html;
