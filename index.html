@@ -912,7 +912,7 @@ function renderNotebooklm() {
    CAMP — Nomads Land Community
    ============================================================ */
 async function renderPreise() {
-  const c = document.getElementById('app-content');
+  const c = document.getElementById('win-content');
   const lang = document.documentElement.lang || 'de';
   c.innerHTML = `<div style="padding:8px 4px;"><div style="color:var(--text-dim);font-size:10px;margin-bottom:12px;">$ cat preise.json | jq '.[] | select(.visibility=="public")'</div><div id="preise-loading" style="color:var(--text-dim);font-size:11px;">Lade Preise...</div></div>`;
   try {
