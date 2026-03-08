@@ -304,6 +304,35 @@ body::after {
   border-radius: 6px; display: flex; align-items: center; justify-content: center;
   font-size: 22px; color: var(--text-muted);
 }
+.photo-card {
+  position: relative; cursor: pointer; border-radius: 6px; overflow: hidden;
+  border: 1px solid var(--card-border); aspect-ratio: 1; background: var(--photo-bg);
+  transition: border-color 0.2s, transform 0.15s;
+}
+.photo-card:hover { border-color: var(--teal); transform: scale(1.02); }
+.photo-card img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.photo-card .photo-overlay {
+  position: absolute; inset: 0; background: linear-gradient(to top, rgba(0,0,0,0.75) 0%, transparent 55%);
+  opacity: 0; transition: opacity 0.2s; display: flex; align-items: flex-end; padding: 6px;
+}
+.photo-card:hover .photo-overlay { opacity: 1; }
+.photo-overlay .photo-title { font-size: 8px; color: #fff; font-weight: 600; line-height: 1.3; }
+.photo-filter-bar { display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 8px; }
+.photo-filter {
+  font-size: 8px; padding: 2px 7px; border-radius: 3px; border: 1px solid var(--card-border);
+  background: transparent; color: var(--text-dim); cursor: pointer; font-family: inherit;
+  transition: all 0.15s; letter-spacing: 0.3px;
+}
+.photo-filter:hover, .photo-filter.active { background: var(--teal); color: #000; border-color: var(--teal); }
+.photo-lightbox {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.92); z-index: 999;
+  display: none; flex-direction: column; align-items: center; justify-content: center; padding: 16px;
+}
+.photo-lightbox.open { display: flex; }
+.photo-lightbox img { max-width: 100%; max-height: 70vh; object-fit: contain; border-radius: 6px; }
+.photo-lightbox .lb-title { color: #fff; font-size: 11px; font-weight: 700; margin-top: 10px; }
+.photo-lightbox .lb-desc { color: rgba(255,255,255,0.65); font-size: 9px; margin-top: 4px; text-align: center; max-width: 400px; }
+.photo-lightbox .lb-close { position: absolute; top: 12px; right: 16px; color: #fff; font-size: 18px; cursor: pointer; background: none; border: none; font-family: inherit; }
 .coming-soon { margin-top: 10px; font-size: 8px; color: var(--text-muted); letter-spacing: 0.5px; }
 .perm-denied { color: #ff5555; font-weight: 700; }
 
@@ -425,13 +454,7 @@ body::after {
       <span class="tile-name" data-de="youtube/" data-en="youtube/">youtube/</span>
       <span class="tile-sub" data-de="Playlists" data-en="Playlists">Playlists</span>
     </div>
-    <div class="app-tile" data-app="notebooklm" onclick="openApp('notebooklm')">
-      <div class="tile-icon">
-        <svg viewBox="0 0 24 24"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
-      </div>
-      <span class="tile-name" data-de="notebooks/" data-en="notebooks/">notebooks/</span>
-      <span class="tile-sub" data-de="NotebookLM" data-en="NotebookLM">NotebookLM</span>
-    </div>
+
     <div class="app-tile" data-app="camp" onclick="openApp('camp')">
       <div class="tile-icon">
         <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
@@ -658,22 +681,103 @@ async function renderLinks() {
 /* ============================================================
    FOTOS — statisch
    ============================================================ */
+const PHOTOS = [
+  {"file_id": "1SZGXE1U-TD1hqDSc910YX6TTREUyA4uu", "url": "https://drive.google.com/thumbnail?id=1SZGXE1U-TD1hqDSc910YX6TTREUyA4uu&sz=w800", "title": {"de": "Hund im Schnee", "en": "Dog in Snow"}, "desc": {"de": "Ein Hund mit lila Wintermantel steht in einer verschneiten Landschaft und blickt in die Kamera.", "en": "A dog in a purple winter coat stands in a snowy landscape, looking at the camera."}, "category": "nature"},
+  {"file_id": "18VYCFJv9rHw613HoV-pdASghfNfTs_8Y", "url": "https://drive.google.com/thumbnail?id=18VYCFJv9rHw613HoV-pdASghfNfTs_8Y&sz=w800", "title": {"de": "Blue-Eyed Nomads Logo", "en": "Blue-Eyed Nomads Logo"}, "desc": {"de": "Logo für 'Blue-Eyed Nomads' mit geteiltem Gesicht von Mann und Wolf, Kompass und Nordlichtern. Zeigt die Essenz des Nomadentums.", "en": "Logo for 'Blue-Eyed Nomads' with split face of man and wolf, compass, and Northern Lights. Captures the essence of nomadism."}, "category": "ai-art"},
+  {"file_id": "12All3-eG9UotS9JVnvjm5m9s6-rZn2wy", "url": "https://drive.google.com/thumbnail?id=12All3-eG9UotS9JVnvjm5m9s6-rZn2wy&sz=w800", "title": {"de": "Traditioneller Pferdewagen am Straßenrand", "en": "Traditional horse wagon roadside"}, "desc": {"de": "Ein Mann mit seinem hölzernen Pferdewagen und mehreren Kaltblütern in einer ländlichen Gegend während der Reise.", "en": "A man with his wooden horse wagon and several draft horses in a rural area during the journey."}, "category": "nomad-life"},
+  {"file_id": "1QZjfi7siRZQSfbResGyjxInA9vEBpUJ3", "url": "https://drive.google.com/thumbnail?id=1QZjfi7siRZQSfbResGyjxInA9vEBpUJ3&sz=w800", "title": {"de": "Odin blickt ins Tal", "en": "Odin overlooks the valley"}, "desc": {"de": "Odin genießt die weite Aussicht über ein blühendes Feld und ein friedliches Dorf unter blauem Himmel.", "en": "Odin enjoys the expansive view over a blooming field and a peaceful village under a blue sky."}, "category": "odin"},
+  {"file_id": "1jjNsmhswafZpkJhAVw1-ui21Pc219rCx", "url": "https://drive.google.com/thumbnail?id=1jjNsmhswafZpkJhAVw1-ui21Pc219rCx&sz=w800", "title": {"de": "Rote Ente mit Wohnwagen", "en": "Red 2CV with trailer"}, "desc": {"de": "Ein roter Citroën 2CV Kastenwagen mit einem weißen Wohnwagen, geparkt vor einem alten Gebäude.", "en": "A red Citroën 2CV panel van with a white trailer, parked in front of an old building."}, "category": "nomad-life"},
+  {"file_id": "1qbpikJJqJp0FYym2y5bQ_d6Td9pCPdV7", "url": "https://drive.google.com/thumbnail?id=1qbpikJJqJp0FYym2y5bQ_d6Td9pCPdV7&sz=w800", "title": {"de": "Smartphone in Natur", "en": "Smartphone in Nature"}, "desc": {"de": "Nahaufnahme einer Hand mit Smartphone vor verschwommener Naturkulisse. Symbolisiert die Verbindung von Technologie und Outdoor-Leben.", "en": "Close-up of a hand with smartphone against a blurred nature backdrop. Symbolizes the connection of technology and outdoor life."}, "category": "nomad-life"},
+  {"file_id": "1ba6O1QnH8lZExUG1hpcF2j7IQLaGKnhR", "url": "https://drive.google.com/thumbnail?id=1ba6O1QnH8lZExUG1hpcF2j7IQLaGKnhR&sz=w800", "title": {"de": "Nomadenleben am Fluss", "en": "Nomad life by the river"}, "desc": {"de": "Ein Zelt steht an einem Flussufer in einer grünen Wiese, umgeben von Bäumen. Im Vordergrund befindet sich ein Solarmodul.", "en": "A tent stands on a riverbank in a green meadow, surrounded by trees. In the foreground is a solar panel."}, "category": "nomad-life"},
+  {"file_id": "1TuQ6M6zZEvGeUA5x1LO79nd0wraRjJU5", "url": "https://drive.google.com/thumbnail?id=1TuQ6M6zZEvGeUA5x1LO79nd0wraRjJU5&sz=w800", "title": {"de": "Hütte in der Natur", "en": "Hut in Nature"}, "desc": {"de": "Eine kleine Holzhütte auf einer grünen Wiese, umgeben von Bäumen und Heuballen unter blauem Himmel.", "en": "A small wooden hut on a green meadow, surrounded by trees and hay bales under a blue sky."}, "category": "nature"},
+  {"file_id": "10_jS_yPUfNyzptT4DeXF45LR-wS1R13D", "url": "https://drive.google.com/thumbnail?id=10_jS_yPUfNyzptT4DeXF45LR-wS1R13D&sz=w800", "title": {"de": "Herbstpanorama mit Kirche", "en": "Autumn Panorama with Church"}, "desc": {"de": "Weitblick über herbstliche Landschaft mit majestätischer Kirche und Bergketten unter weitem Himmel.", "en": "Panoramic autumn landscape featuring a majestic church and distant mountains under a vast sky."}, "category": "nature"},
+  {"file_id": "1aqPiJEgsPpK7pC9OKZXiD-hg1VULSoWb", "url": "https://drive.google.com/thumbnail?id=1aqPiJEgsPpK7pC9OKZXiD-hg1VULSoWb&sz=w800", "title": {"de": "Waldgöttin mit Hirschgeweih", "en": "Forest goddess with antlers"}, "desc": {"de": "Porträt einer mystischen Frau mit leuchtendem Geweih in einem nebligen Wald, umgeben von einem magischen Schein. Symbolisiert Natur und Geheimnis.", "en": "Portrait of a mystical woman with glowing antlers in a foggy forest, surrounded by a magical aura. Symbolizes nature and mystery."}, "category": "ai-art"},
+  {"file_id": "1GgIns-uoVGIKUD-dwvJuJIDgkXp20X5i", "url": "https://drive.google.com/thumbnail?id=1GgIns-uoVGIKUD-dwvJuJIDgkXp20X5i&sz=w800", "title": {"de": "Mann hinter der Bühne", "en": "Man backstage at theater"}, "desc": {"de": "Ein Mann liest hinter der Bühne, während Schauspieler auf der Bühne proben. Ein Kronleuchter hängt über der Bühne.", "en": "A man reads backstage while actors rehearse on stage. A chandelier hangs above the stage."}, "category": "work"},
+  {"file_id": "1O2DxqwB4cV3aRS9vjPeQKa9xPtx2hJ6d", "url": "https://drive.google.com/thumbnail?id=1O2DxqwB4cV3aRS9vjPeQKa9xPtx2hJ6d&sz=w800", "title": {"de": "Odin am Lagerfeuer", "en": "Odin at the campfire"}, "desc": {"de": "Mein Husky Odin entspannt sich am Lagerfeuer während eines Campingausflugs im Wald. Im Hintergrund steht unser Zelt.", "en": "My husky Odin relaxes by the campfire during a camping trip in the woods. Our tent is in the background."}, "category": "odin"},
+  {"file_id": "1Ufynry53DARlS3tiPtqcQJrGgtB1QUl9", "url": "https://drive.google.com/thumbnail?id=1Ufynry53DARlS3tiPtqcQJrGgtB1QUl9&sz=w800", "title": {"de": "Outdoor-Abenteuer mit E-Bike", "en": "Outdoor adventure with e-bike"}, "desc": {"de": "E-Bike mit Anhänger, Solarpaneelen, Hund und Katze, bereit für Outdoor-Abenteuer in der Natur.", "en": "E-bike with trailer, solar panels, dog and cat, ready for outdoor adventure in nature."}, "category": "nomad-life"},
+  {"file_id": "1mVDIxXrbavSZwTGThG1iNC9m7Sm_vLtL", "url": "https://drive.google.com/thumbnail?id=1mVDIxXrbavSZwTGThG1iNC9m7Sm_vLtL&sz=w800", "title": {"de": "Nomaden-Büro am Flussufer", "en": "Nomad office by the river"}, "desc": {"de": "Mobiles Arbeitssetup mit Laptop und Tablet am Fluss, betrieben mit Powerbanks. Produktives Arbeiten in der Natur.", "en": "Mobile work setup with laptop and tablet by the river, powered by power banks. Productive work in nature."}, "category": "nomad-life"},
+  {"file_id": "1W4vieuCT8Yd22oQnJi8Qg8uoGVEfuyBQ", "url": "https://drive.google.com/thumbnail?id=1W4vieuCT8Yd22oQnJi8Qg8uoGVEfuyBQ&sz=w800", "title": {"de": "Pferdewagen neben LKW", "en": "Horse cart next to truck"}, "desc": {"de": "Ein traditioneller Pferdewagen, beladen mit Reisig, fährt auf einer Straße neben einem modernen XPO Logistics LKW. Kontrast von Alt und Neu.", "en": "A traditional horse-drawn cart loaded with brushwood drives on a road next to a modern XPO Logistics truck, showing a contrast."}, "category": "nomad-life"},
+  {"file_id": "1jKUe3maXqMeVbAP942DKTycFlxMHjfct", "url": "https://drive.google.com/thumbnail?id=1jKUe3maXqMeVbAP942DKTycFlxMHjfct&sz=w800", "title": {"de": "Naturaufnahme in Rumänien", "en": "Nature shot in Romania"}, "desc": {"de": "Eine Aufnahme aus der Natur in Rumänien, aufgenommen mit einem Google Pixel Fold. Zeigt die Umgebung eines digitalen Nomaden.", "en": "A nature shot from Romania, taken with a Google Pixel Fold. Shows the surroundings of a digital nomad."}, "category": "nature"},
+  {"file_id": "14uJFVwfkcy_9pUcUHxyLg9RYGciLc0Wt", "url": "https://drive.google.com/thumbnail?id=14uJFVwfkcy_9pUcUHxyLg9RYGciLc0Wt&sz=w800", "title": {"de": "Katze am Teich bei Sonnenuntergang", "en": "Cat by Pond at Sunset"}, "desc": {"de": "Eine schwarz-weiße Katze blickt in einen Teich, der einen rosa-orangen Sonnenuntergang widerspiegelt.", "en": "A black and white cat looks into a pond reflecting a pink and orange sunset."}, "category": "nature"},
+  {"file_id": "1-ydvk8H0iZu9hoifW1KJnCJlOIVacWI-", "url": "https://drive.google.com/thumbnail?id=1-ydvk8H0iZu9hoifW1KJnCJlOIVacWI-&sz=w800", "title": {"de": "Katze vor Nomads Land Spiel", "en": "Cat in front of Nomads Land Game"}, "desc": {"de": "Eine neugierige Katze blickt in die Kamera vor einem Monitor, der ein Spiel mit dem Titel 'Nomads Land Life' und Waldlandschaft zeigt.", "en": "A curious cat looks into the camera in front of a monitor displaying a 'Nomads Land Life' game with a forest landscape."}, "category": "nomad-life"},
+  {"file_id": "1qqXk9U5i2YdO8BD5c9U8FHR2mKgquq3T", "url": "https://drive.google.com/thumbnail?id=1qqXk9U5i2YdO8BD5c9U8FHR2mKgquq3T&sz=w800", "title": {"de": "Mobiler Arbeitsplatz Natur", "en": "Mobile Workspace Nature"}, "desc": {"de": "Ein eingerichteter mobiler Arbeitsplatz im Grünen mit Laptop, Kaffee und Stromversorgung aus dem Van.", "en": "A mobile workspace set up in nature with laptop, coffee, and power supply from the van."}, "category": "nomad-life"},
+  {"file_id": "1gtZw6_sQwIjxBSIp6dT-_FCtPuyrLQlv", "url": "https://drive.google.com/thumbnail?id=1gtZw6_sQwIjxBSIp6dT-_FCtPuyrLQlv&sz=w800", "title": {"de": "Odin und Freund bei Sonnenuntergang", "en": "Odin and Friend at Sunset"}, "desc": {"de": "Odin und ein Freund genießen den wunderschönen Sonnenuntergang auf einer grünen Wiese.", "en": "Odin and a friend enjoy the beautiful sunset in a green meadow."}, "category": "odin"},
+  {"file_id": "1RoqX19pQxKlh4MIPkEZQOIEXhptKNP1_", "url": "https://drive.google.com/thumbnail?id=1RoqX19pQxKlh4MIPkEZQOIEXhptKNP1_&sz=w800", "title": {"de": "Präsentation und Robotik im Büro", "en": "Presentation and Robotics in Office"}, "desc": {"de": "Ein Mann präsentiert vor Publikum mit einem Roboter im Raum und zeigt Visionen an einer Wand.", "en": "A man presents to an audience with a robot in the room and shows visions on a wall."}, "category": "work"},
+  {"file_id": "1U6eJNNEJQdVzyiuHfxk64Qy07rXuBVKZ", "url": "https://drive.google.com/thumbnail?id=1U6eJNNEJQdVzyiuHfxk64Qy07rXuBVKZ&sz=w800", "title": {"de": "Arbeitsplatz im Zelt", "en": "Tent Office Setup"}, "desc": {"de": "Ein moderner Laptop-Arbeitsplatz in einem Zelt, mit Blick auf einen grünen Wald, symbolisiert das digitale Nomadenleben von Phil Zinser.", "en": "A modern laptop workstation inside a tent, overlooking a green forest, symbolizing Phil Zinser's digital nomad lifestyle."}, "category": "nomad-life"},
+  {"file_id": "1HT8pJEoXb9An2-7Nxht7L-akL0JuEe69", "url": "https://drive.google.com/thumbnail?id=1HT8pJEoXb9An2-7Nxht7L-akL0JuEe69&sz=w800", "title": {"de": "Ländliches Dorf in Hügellandschaft", "en": "Rural Village Hillside Scene"}, "desc": {"de": "Ein malerisches Dorf mit Häusern, Kirche und Feldern eingebettet in eine grüne Hügellandschaft.", "en": "A picturesque village with houses, a church, and fields nestled in a green hilly landscape."}, "category": "nature"},
+  {"file_id": "1KawHBO7Ktnby19XfnhNqSUXpmaWZno-C", "url": "https://drive.google.com/thumbnail?id=1KawHBO7Ktnby19XfnhNqSUXpmaWZno-C&sz=w800", "title": {"de": "VR-Präsentation im Zukunftszentrum", "en": "VR presentation at Future Center"}, "desc": {"de": "Zuschauer verfolgen eine Präsentation mit VR- und AR-Technologien in einem modernen Konferenzraum.", "en": "Audience watching a presentation featuring VR and AR technologies in a modern conference room."}, "category": "events"},
+  {"file_id": "1auegOLEtsgjFG_lWyaKEM-CPKgciMHcq", "url": "https://drive.google.com/thumbnail?id=1auegOLEtsgjFG_lWyaKEM-CPKgciMHcq&sz=w800", "title": {"de": "Nomadenleben unter dem Sternenhimmel", "en": "Nomad Life Under Starry Sky"}, "desc": {"de": "Phil und Partnerin am Lagerfeuer mit Hund Odin, Geodome und digitaler Schnittstelle unter der Milchstraße.", "en": "Phil and partner by campfire with dog Odin, geodome, and digital interface under the Milky Way."}, "category": "nomad-life"},
+  {"file_id": "1wTCeM9QMeYPYaVUev4vACT2YmjfpIwUz", "url": "https://drive.google.com/thumbnail?id=1wTCeM9QMeYPYaVUev4vACT2YmjfpIwUz&sz=w800", "title": {"de": "Lagerfeuer mit Hund bei Nacht", "en": "Campfire with Dog at Night"}, "desc": {"de": "Ein Mann und sein Hund sitzen gemütlich an einem Lagerfeuer in der klaren Nacht, umgeben von Bäumen. Friedliche Szene.", "en": "A man and his dog sit cozily by a campfire in the clear night, surrounded by trees. Peaceful scene."}, "category": "nomad-life"},
+  {"file_id": "1FH47G5yLSLB7s7bpOrPPYvHgSCZLejn7", "url": "https://drive.google.com/thumbnail?id=1FH47G5yLSLB7s7bpOrPPYvHgSCZLejn7&sz=w800", "title": {"de": "Präsentation über KI", "en": "AI Presentation"}, "desc": {"de": "Ein Redner präsentiert vor einem Publikum über KI, die Inhalte gesammelt und Präsentationen erstellt.", "en": "A speaker presents to an audience about AI, which collected content and created presentations."}, "category": "ai-art"},
+  {"file_id": "1o0xtT38X-63MB9gOhkwzAR3GjxE1Fcop", "url": "https://drive.google.com/thumbnail?id=1o0xtT38X-63MB9gOhkwzAR3GjxE1Fcop&sz=w800", "title": {"de": "Navigation in der Natur", "en": "Navigating in Nature"}, "desc": {"de": "Mit dem Smartphone die Routen checken. Phil navigiert durch neue Pfade und entdeckt die Schönheit der Wildnis als digitaler Nomade.", "en": "Checking routes with the smartphone. Phil navigates new paths and discovers the beauty of the wilderness as a digital nomad."}, "category": "nomad-life"},
+  {"file_id": "1xFF1dhs2HAUwPs8X3tN-3wuVYYxZ_2fr", "url": "https://drive.google.com/thumbnail?id=1xFF1dhs2HAUwPs8X3tN-3wuVYYxZ_2fr&sz=w800", "title": {"de": "Mobiles Büro im Zelt", "en": "Mobile Office in a Tent"}, "desc": {"de": "Ein Blick in ein geräumiges Zelt, das als mobiler Arbeitsplatz dient, mit einem Feldbett, einem Campingstuhl und einem Laptop auf einem Tisch.", "en": "A view inside a spacious tent that serves as a mobile workspace, with a cot, a camping chair, and a laptop on a table."}, "category": "work"},
+  {"file_id": "10498QnZ14jZ2vm9iu4d93VvgU7g1T5VT", "url": "https://drive.google.com/thumbnail?id=10498QnZ14jZ2vm9iu4d93VvgU7g1T5VT&sz=w800", "title": {"de": "Großer Pilz im Wald", "en": "Large Mushroom in Forest"}, "desc": {"de": "Ein großer Schirmpilz mit schuppigem Hut steht inmitten von Gras und Herbstlaub in der Natur.", "en": "A large, brown parasol mushroom with a textured cap stands amidst green grass and fallen leaves on the forest floor."}, "category": "nature"},
+  {"file_id": "100wz9NGUTdkY1apgU4PDv2v561hFyZwi", "url": "https://drive.google.com/thumbnail?id=100wz9NGUTdkY1apgU4PDv2v561hFyZwi&sz=w800", "title": {"de": "Mann, Geist und Hund am Lagerfeuer", "en": "Man, Spirit, and Dog by Campfire"}, "desc": {"de": "Ein Mann mit Bart, ein transparent leuchtender Geist und ein Hund sitzen nachts um ein Lagerfeuer im Wald.", "en": "A bearded man, a transparent glowing spirit, and a dog sit around a campfire at night in the forest."}, "category": "ai-art"},
+  {"file_id": "1qWC3yBY6TN1WCxn0PndU8TcFiUytxf3w", "url": "https://drive.google.com/thumbnail?id=1qWC3yBY6TN1WCxn0PndU8TcFiUytxf3w&sz=w800", "title": {"de": "Gaming-Setup mit LKW-Fahrsimulation", "en": "Gaming setup with truck driving simulation"}, "desc": {"de": "Ein Gaming-Setup zeigt eine LKW-Fahrsimulation auf zwei Bildschirmen in einem gemütlichen Raum.", "en": "A gaming setup shows a truck driving simulation on two screens in a cozy room."}, "category": "ai-art"},
+  {"file_id": "11OJL0nbXnycGmdt0eoRAewisxk6NN1B9", "url": "https://drive.google.com/thumbnail?id=11OJL0nbXnycGmdt0eoRAewisxk6NN1B9&sz=w800", "title": {"de": "Gaia AI Lab Konzept", "en": "Gaia AI Lab Concept"}, "desc": {"de": "Konzeptbild für Gaia AI Lab, das organische Wurzeln und digitale Netzwerke verbindet. Symbolisiert Souveränität im Zeitalter der KI.", "en": "Concept image for Gaia AI Lab, blending organic roots and digital networks. Symbolizes sovereignty in the AI age."}, "category": "ai-art"},
+  {"file_id": "1-sqLbH6hKHD-y3kXlPmKbVF2PJtcv0W4", "url": "https://drive.google.com/thumbnail?id=1-sqLbH6hKHD-y3kXlPmKbVF2PJtcv0W4&sz=w800", "title": {"de": "Nomadenleben mit E-Bike und Haustieren", "en": "Nomad life with e-bike and pets"}, "desc": {"de": "Ein E-Bike mit Anhänger, Solarpaneelen, Zelt, einem Hund und einer Katze in einer nebligen Waldlandschaft.", "en": "An e-bike with trailer, solar panels, tent, a dog and a cat in a foggy forest landscape."}, "category": "nomad-life"},
+  {"file_id": "1-WHTy38lc-shy54oSYnEPqZeJ1Ve7lTl", "url": "https://drive.google.com/thumbnail?id=1-WHTy38lc-shy54oSYnEPqZeJ1Ve7lTl&sz=w800", "title": {"de": "Grüner Wald mit Odin", "en": "Green Forest with Odin"}, "desc": {"de": "Ein dichter, grüner Wald mit hellem Unterholz. Im Hintergrund liegt Phil Zinsers Hund Odin entspannt im Gras.", "en": "Dense green forest with bright undergrowth. Phil Zinser's dog Odin rests in the grass in the background."}, "category": "odin"},
+  {"file_id": "1vR8q4tC1gycIMh3JQtuWoDKSccCj49Fo", "url": "https://drive.google.com/thumbnail?id=1vR8q4tC1gycIMh3JQtuWoDKSccCj49Fo&sz=w800", "title": {"de": "Naturhaus mit Odin", "en": "Nature House with Odin"}, "desc": {"de": "Ein einzigartiges Naturhaus inmitten grüner Landschaft. Ein Hund, möglicherweise Odin, ruht im Vordergrund. Ideal für das Nomadenleben.", "en": "A unique natural house amid green landscape. A dog, possibly Odin, rests in the foreground. Ideal for nomad life."}, "category": "odin"},
+  {"file_id": "1-J6hjzLLJ5saLyQbpj3XWFodgqMiLlux", "url": "https://drive.google.com/thumbnail?id=1-J6hjzLLJ5saLyQbpj3XWFodgqMiLlux&sz=w800", "title": {"de": "Nomadisches Arbeiten in der Natur", "en": "Nomadic Work in Nature"}, "desc": {"de": "Ein mobiles Arbeitssetup mit Laptop, Solarpanel und VR-Headset auf einem Rucksack in einem Feld mit Dorfaussicht.", "en": "Mobile work setup with laptop, solar panel and VR headset on a backpack in a field with village view."}, "category": "nomad-life"},
+  {"file_id": "1b4-TWg6lZW6dt2uuXIigU5NrZ37oFLu7", "url": "https://drive.google.com/thumbnail?id=1b4-TWg6lZW6dt2uuXIigU5NrZ37oFLu7&sz=w800", "title": {"de": "Schlafender Welpe und Katze", "en": "Sleeping Puppy and Cat"}, "desc": {"de": "Ein friedlich schlafender Welpe, eingekuschelt in eine Decke, wird sanft von einer Katzenpfote berührt. Ein Moment der Geborgenheit.", "en": "A peacefully sleeping puppy snuggled in a blanket, gently touched by a cat's paw. A moment of warmth."}, "category": "odin"},
+  {"file_id": "1k8MQfi2kYxkywfAjCgmmzvHjKmGZ9LjI", "url": "https://drive.google.com/thumbnail?id=1k8MQfi2kYxkywfAjCgmmzvHjKmGZ9LjI&sz=w800", "title": {"de": "Mobiles Büro in der Natur", "en": "Mobile Office in Nature"}, "desc": {"de": "Ein mobiles Arbeits-Setup in einem Zelt, mit Laptop, Drohne und technischem Equipment. Perfekt für digitales Nomadenleben.", "en": "Mobile work setup in a tent with laptop, drone and tech equipment. Perfect for digital nomad life."}, "category": "nomad-life"}
+];
+
+/* ============================================================
+   FOTOS — Galerie mit Filter
+   ============================================================ */
 function renderPhotos() {
-  return `
-    <div class="term-line">$ <span class="cmd">ls ${lang==='de'?'fotos':'photos'}/</span></div>
-    <div class="result-card">
-      <div class="rc-name">${lang==='de'?'Nomad Life':'Nomad Life'}</div>
-      <div class="rc-desc">${lang==='de'?'Fotos aus dem Leben als digitaler Nomad — Zelte, Wälder, Lagerfeuer und Laptops.':'Photos from life as a digital nomad — tents, forests, campfires and laptops.'}</div>
+  const cats = {
+    all:        { de: 'Alle', en: 'All' },
+    'nomad-life': { de: 'Nomad Life', en: 'Nomad Life' },
+    nature:     { de: 'Natur', en: 'Nature' },
+    odin:       { de: 'Odin', en: 'Odin' },
+    work:       { de: 'Work', en: 'Work' },
+    'ai-art':   { de: 'AI Art', en: 'AI Art' },
+    events:     { de: 'Events', en: 'Events' },
+  };
+  let filterBar = `<div class="photo-filter-bar">`;
+  for (const [key, label] of Object.entries(cats)) {
+    filterBar += `<button class="photo-filter${key==='all'?' active':''}" onclick="filterPhotos('${key}',this)">${lang==='de'?label.de:label.en}</button>`;
+  }
+  filterBar += `</div>`;
+
+  let grid = `<div class="photo-grid" id="photo-grid">`;
+  for (const ph of PHOTOS) {
+    grid += `<div class="photo-card" data-cat="${ph.category}" onclick="openLightbox(${JSON.stringify(ph.url)},${JSON.stringify(ph.title[lang]||ph.title.de)},${JSON.stringify(ph.desc[lang]||ph.desc.de)})">
+      <img src="${ph.url}" alt="${ph.title[lang]||ph.title.de}" loading="lazy" onerror="this.parentElement.style.display='none'">
+      <div class="photo-overlay"><span class="photo-title">${ph.title[lang]||ph.title.de}</span></div>
+    </div>`;
+  }
+  grid += `</div>`;
+
+  return `<div class="term-line">$ <span class="cmd">ls ${lang==='de'?'fotos':'photos'}/ --all</span></div>
+    <div class="result-card" style="margin-bottom:8px;">
+      <div class="rc-name">${lang==='de'?'Nomad Life — 39 Fotos':'Nomad Life — 39 Photos'}</div>
+      <div class="rc-desc">${lang==='de'?'Aus dem Leben als digitaler Nomad — Natur, Lagerfeuer, Odin, Arbeit und KI-Art.':'From life as a digital nomad — nature, campfires, Odin, work and AI art.'}</div>
     </div>
-    <div class="photo-grid">
-      <div class="photo-placeholder">🏕️</div>
-      <div class="photo-placeholder">🌲</div>
-      <div class="photo-placeholder">🔥</div>
-      <div class="photo-placeholder">💻</div>
-      <div class="photo-placeholder">🐕</div>
-      <div class="photo-placeholder">🌄</div>
-    </div>
-    <div class="coming-soon">// ${lang==='de'?'Fotos werden bald hinzugefügt':'Photos will be added soon'}</div>`;
+    ${filterBar}
+    ${grid}`;
+}
+
+function filterPhotos(cat, btn) {
+  document.querySelectorAll('.photo-filter').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('#photo-grid .photo-card').forEach(card => {
+    card.style.display = (cat === 'all' || card.dataset.cat === cat) ? '' : 'none';
+  });
+}
+
+function openLightbox(url, title, desc) {
+  const lb = document.getElementById('photo-lightbox');
+  lb.querySelector('img').src = url;
+  lb.querySelector('.lb-title').textContent = title;
+  lb.querySelector('.lb-desc').textContent = desc;
+  lb.classList.add('open');
+}
+
+function closeLightbox() {
+  document.getElementById('photo-lightbox').classList.remove('open');
 }
 
 /* ============================================================
@@ -832,7 +936,6 @@ const appPaths = {
   tools:      { de: '~/os/tools/', en: '~/os/tools/' },
   links:      { de: '~/os/links/', en: '~/os/links/' },
   youtube:    { de: '~/os/youtube/', en: '~/os/youtube/' },
-  notebooklm: { de: '~/os/notebooks/', en: '~/os/notebooks/' },
   camp:       { de: '~/os/camp/', en: '~/os/camp/' },
 };
 
@@ -857,7 +960,6 @@ async function renderApp(id) {
     case 'privat':     c.innerHTML = renderPrivat(); break;
     case 'tools':      c.innerHTML = renderTools(); break;
     case 'youtube':    c.innerHTML = renderYoutube(); break;
-    case 'notebooklm': c.innerHTML = renderNotebooklm(); break;
     case 'camp':       c.innerHTML = renderCamp(); break;
   }
 }
@@ -866,5 +968,13 @@ function closeApp() {
   document.getElementById('app-window').classList.remove('open');
 }
 </script>
+
+<!-- Foto Lightbox -->
+<div class="photo-lightbox" id="photo-lightbox" onclick="closeLightbox()">
+  <button class="lb-close" onclick="closeLightbox()">✕</button>
+  <img src="" alt="">
+  <div class="lb-title"></div>
+  <div class="lb-desc"></div>
+</div>
 </body>
 </html>
