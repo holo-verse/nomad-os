@@ -188,6 +188,8 @@ body::after {
 .app-tile[data-app="notebooklm"]  .tile-icon svg { stroke: #4caf50; }
 .app-tile[data-app="camp"]        .tile-icon { background: linear-gradient(135deg, #1a1000, #3a2800); }
 .app-tile[data-app="camp"]        .tile-icon svg { stroke: #ffb347; }
+.app-tile[data-app="preise"]      .tile-icon { background: linear-gradient(135deg, #0a2a1a, #1a5a2a); }
+.app-tile[data-app="preise"]      .tile-icon svg { stroke: #50e3a4; }
 
 /* Light mode tile colors */
 [data-theme="light"] .app-tile[data-app="projekte"]   .tile-icon { background: linear-gradient(135deg, #e8f5e9, #c8e6c9); }
@@ -208,6 +210,8 @@ body::after {
 [data-theme="light"] .app-tile[data-app="notebooklm"] .tile-icon svg { stroke: #2e7d32; }
 [data-theme="light"] .app-tile[data-app="camp"]       .tile-icon { background: linear-gradient(135deg, #fff8e1, #ffecb3); }
 [data-theme="light"] .app-tile[data-app="camp"]       .tile-icon svg { stroke: #e65100; }
+[data-theme="light"] .app-tile[data-app="preise"]     .tile-icon { background: linear-gradient(135deg, #e8f5e9, #c8e6c9); }
+[data-theme="light"] .app-tile[data-app="preise"]     .tile-icon svg { stroke: #1b5e20; }
 
 .tile-name { font-size: 10px; font-weight: 700; color: var(--text-strong); letter-spacing: 0.3px; text-align: center; }
 .tile-sub  { font-size: 8px; color: var(--text-dim); text-align: center; margin-top: -3px; line-height: 1.3; }
@@ -455,6 +459,12 @@ body::after {
       <span class="tile-sub" data-de="Playlists" data-en="Playlists">Playlists</span>
     </div>
 
+    <div class="app-tile" data-app="preise" onclick="openApp('preise')">
+      <div class="tile-icon">
+        <svg viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+      </div>
+      <div class="tile-name" data-de="Preise" data-en="Pricing">Preise</div>
+    </div>
     <div class="app-tile" data-app="camp" onclick="openApp('camp')">
       <div class="tile-icon">
         <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
@@ -901,6 +911,71 @@ function renderNotebooklm() {
 /* ============================================================
    CAMP — Nomads Land Community
    ============================================================ */
+async function renderPreise() {
+  const c = document.getElementById('app-content');
+  const lang = document.documentElement.lang || 'de';
+  c.innerHTML = `<div style="padding:8px 4px;"><div style="color:var(--text-dim);font-size:10px;margin-bottom:12px;">$ cat preise.json | jq '.[] | select(.visibility=="public")'</div><div id="preise-loading" style="color:var(--text-dim);font-size:11px;">Lade Preise...</div></div>`;
+  try {
+    const [prodRes, priceRes] = await Promise.all([
+      fetch(`${SUPABASE_URL}/rest/v1/products?select=id,name,description_short,product_type&product_type=in.(consulting,einmalig,workshop)&status=eq.active`, {headers: SUPABASE_HEADERS}),
+      fetch(`${SUPABASE_URL}/rest/v1/pricing?select=product_id,label,price,price_model,currency&visibility=eq.public`, {headers: SUPABASE_HEADERS})
+    ]);
+    const products = await prodRes.json();
+    const pricing = await priceRes.json();
+
+    // Preise mappen — nur Standard (kein Impact/Enterprise)
+    const priceMap = {};
+    for (const p of pricing) {
+      const lbl = typeof p.label === 'object' ? (p.label.de || '') : String(p.label);
+      if (!lbl.includes('Impact') && !lbl.includes('Enterprise')) {
+        priceMap[p.product_id] = { price: p.price, model: p.price_model };
+      }
+    }
+
+    const sections = [
+      { type: 'consulting', icon: '💼', label_de: 'Beratung & Strategie', label_en: 'Consulting & Strategy' },
+      { type: 'einmalig',   icon: '🔧', label_de: 'Projektleistungen',    label_en: 'Project Services' },
+      { type: 'workshop',   icon: '🎓', label_de: 'Workshops & Training',  label_en: 'Workshops & Training' },
+    ];
+
+    let html = '<div style="padding:8px 4px;">';
+    html += `<div style="color:var(--text-dim);font-size:10px;margin-bottom:12px;">$ cat preise.json | jq '.[] | select(.visibility=="public")'</div>`;
+
+    for (const sec of sections) {
+      const items = products.filter(p => p.product_type === sec.type);
+      if (!items.length) continue;
+      const secLabel = lang === 'en' ? sec.label_en : sec.label_de;
+      html += `<div style="margin-bottom:14px;">`;
+      html += `<div style="font-size:11px;font-weight:700;color:var(--teal);border-bottom:1px solid var(--card-border);padding-bottom:4px;margin-bottom:8px;">${sec.icon} ${secLabel}</div>`;
+      for (const prod of items) {
+        const name = typeof prod.name === 'object' ? (lang === 'en' ? prod.name.en : prod.name.de) : prod.name;
+        const desc = typeof prod.description_short === 'object' ? (lang === 'en' ? prod.description_short.en : prod.description_short.de) : (prod.description_short || '');
+        const priceInfo = priceMap[prod.id];
+        const priceStr = priceInfo ? `${priceInfo.price.toLocaleString('de-DE')} EUR` : '—';
+        const modelStr = priceInfo ? (priceInfo.model === 'einmalig' ? (lang === 'en' ? 'one-time' : 'einmalig') : priceInfo.model) : '';
+        html += `<div style="background:var(--card-bg);border:1px solid var(--card-border);border-radius:6px;padding:8px 10px;margin-bottom:6px;">`;
+        html += `<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">`;
+        html += `<div style="font-size:11px;font-weight:700;color:var(--text-strong);flex:1;">${name}</div>`;
+        html += `<div style="font-size:11px;font-weight:700;color:var(--teal);white-space:nowrap;">${priceStr}<span style="font-size:9px;color:var(--text-dim);font-weight:400;"> ${modelStr}</span></div>`;
+        html += `</div>`;
+        if (desc) html += `<div style="font-size:9px;color:var(--text-dim);margin-top:3px;line-height:1.4;">${desc}</div>`;
+        html += `</div>`;
+      }
+      html += `</div>`;
+    }
+
+    html += `<div style="font-size:9px;color:var(--text-dim);border-top:1px solid var(--card-border);padding-top:8px;margin-top:4px;">`;
+    html += lang === 'en'
+      ? '💬 Hourly rate on request: 100 EUR/h · Individual offers & funding advice: <a href="mailto:phil@holo-ver.se" style="color:var(--teal);">Book Discovery Call</a>'
+      : '💬 Stundensatz auf Anfrage: 100 EUR/h · Individuelle Angebote & Fördermittelberatung: <a href="mailto:phil@holo-ver.se" style="color:var(--teal);">Discovery Call buchen</a>';
+    html += `</div>`;
+    html += '</div>';
+    c.innerHTML = html;
+  } catch(e) {
+    c.innerHTML = `<div style="padding:16px;color:var(--text-dim);font-size:11px;">Fehler beim Laden der Preise.</div>`;
+  }
+}
+
 function renderCamp() {
   return `
     <div class="term-line">$ <span class="cmd">cat camp/README.md</span></div>
@@ -953,6 +1028,7 @@ async function renderApp(id) {
     case 'tools':      c.innerHTML = renderTools(); break;
     case 'youtube':    c.innerHTML = renderYoutube(); break;
     case 'camp':       c.innerHTML = renderCamp(); break;
+    case 'preise':     await renderPreise(); break;
   }
 }
 
