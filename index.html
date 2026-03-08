@@ -917,8 +917,8 @@ async function renderPreise() {
   c.innerHTML = `<div style="padding:8px 4px;"><div style="color:var(--text-dim);font-size:10px;margin-bottom:12px;">$ cat preise.json | jq '.[] | select(.visibility=="public")'</div><div id="preise-loading" style="color:var(--text-dim);font-size:11px;">Lade Preise...</div></div>`;
   try {
     const [prodRes, priceRes] = await Promise.all([
-      fetch(`${SUPABASE_URL}/rest/v1/products?select=id,name,description_short,product_type&product_type=in.(consulting,einmalig,workshop)&status=eq.active`, {headers: SUPABASE_HEADERS}),
-      fetch(`${SUPABASE_URL}/rest/v1/pricing?select=product_id,label,price,price_model,currency&visibility=eq.public`, {headers: SUPABASE_HEADERS})
+      fetch(`${SB_URL}/rest/v1/products?select=id,name,description_short,product_type&product_type=in.(consulting,einmalig,workshop)&status=eq.active`, {headers: SB_HEADERS}),
+      fetch(`${SB_URL}/rest/v1/pricing?select=product_id,label,price,price_model,currency&visibility=eq.public`, {headers: SB_HEADERS})
     ]);
     const products = await prodRes.json();
     const pricing = await priceRes.json();
